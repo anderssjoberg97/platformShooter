@@ -24,10 +24,11 @@ var enemy={
     modeVar:{
         targetX:null,
         targetY:null,
-        graphX:null,
-        graphY:null,
-        graphA:null,
-        graphB:null
+        distance:null,
+        avgSpeed:3,
+        maxSpeed:8,
+        frame:0,
+        numFrames:null
     }
 };
 var keys=[], mouse={x:null,y:null,down:false};
@@ -119,38 +120,42 @@ function shootingComponent(){
             velY:velY
         });
     }
-    weapons[0].reloading++;
+    weapons[0].reloading++; 
 }
 function enemyAi(){
-    //Check if time for modeswitch
-    //if(enemy.mode==1)
+    //Mode 0 --> Fly to a random point in a smooth movement
     if(enemy.mode==0){
-        while(enemy.modeVar.targetX==null || enemy.modeVar.targetY==null || Math.sqrt((Math.pow(enemy.x-enemy.modeVar.targetX,2)+Math.pow(enemy.y-enemy.modeVar.targetY,2)))<100){
-            enemy.modeVar.targetX=Math.floor((Math.random()*640));
-            enemy.modeVar.targetY=Math.floor((Math.random()*200));
-            if(enemy.x<enemy.modeVar.targetX){
-                enemy.modeVar.graphX=enemy.modeVar.targetX-enemy.x;
-                if(enemy.y<enemy.modeVar.targetY){
-                    enemy.modeVar.graphY=enemy.modeVar.targetY-enemy.y;
-                }else{
-                    enemy.modeVar.graphY=enemy.y-enemy.modeVar.targetY;
-                }
-                console.log(enemy.modeVar.graphX+" "+enemy.modeVar.graphY);
-                var b=Math.random()*10;
-                var a=(enemy.modeVar.graphY-(b*enemy.modeVar.graphX))/Math.pow(enemy.modeVar.graphX,2);
-                console.log(a+"x^2+"+b+"x");
-                var tempVel=1;
-                var tempCurX=0;
-                var tempIntegral=tempVel+Math.sqrt(Math.pow(a*tempCurX+b,2)+1);
-                var nextX=(Math.sqrt(Math.pow(tempIntegral,2)-1)-b/a);
-                console.log("nextX "+nextX);
-            }else{
-                enemyMode.modeVar.graphX=enemy.x-enemy.modeVar.targetX;
-            }
-            
-            
+    	//Generate a new target position if none is set or if the target generated is to close to the enemys current position
+        while(enemy.modeVar.targetX==null || enemy.modeVar.targetY==null || (Math.sqrt((Math.pow((enemy.x+(enemy.width/2))-enemy.modeVar.targetX,2)+Math.pow((enemy.y+(enemy.height/2))-enemy.modeVar.targetY,2)))<100 && enemy.modeVar.frame==0)){
+            enemy.modeVar.targetX=(enemy.width/2)+Math.floor((Math.random()*(width-enemy.width)));
+            enemy.modeVar.targetY=enemy.height+Math.floor((Math.random()*(height/2)));
+            enemy.modeVar.numFrames=Math.floor(Math.sqrt((Math.pow((enemy.x+(enemy.width/2))-enemy.modeVar.targetX,2)+Math.pow((enemy.y+(enemy.height/2))-enemy.modeVar.targetY,2)))/enemy.modeVar.avgSpeed);
+            enemy.modeVar.frame=0;
         }
-        //if(enemy.x!=enemy.x)
+        var a=-((6*enemy.modeVar.numFrames*enemy.modeVar.avgSpeed)/Math.pow(enemy.modeVar.numFrames,3));
+        var b=-(enemy.modeVar.numFrames*a);
+        var vel=a*Math.pow(enemy.modeVar.frame,2)+b*enemy.modeVar.frame;
+        if(vel>=0 && enemy.modeVar.frame<=enemy.modeVar.numFrames){
+        	var velX, velY;
+        	var angle = Math.acos((enemy.modeVar.targetX-(enemy.x+(enemy.width/2)))/Math.sqrt((Math.pow((enemy.x+(enemy.width/2))-enemy.modeVar.targetX,2)+Math.pow((enemy.y+(enemy.height/2))-enemy.modeVar.targetY,2))));
+        	velX=Math.cos(angle)*vel;
+        	if((enemy.modeVar.targetY-(enemy.y+(enemy.height/2)))>=0){
+        		velY=Math.sin(angle)*vel;
+        	}else{
+        		velY=-Math.sin(angle)*vel;
+        	}
+        	enemy.x+=velX;
+        	enemy.y+=velY;
+        	enemy.modeVar.frame++;
+        }else{
+        	enemy.modeVar.targetX=null;
+        	enemy.modeVar.targetY=null;
+        	enemy.modeVar.numFrames=null;
+        	enemy.modeVar.frame=0;
+        }
+
+        
+        
     }
 }
 function collisionCheck(obj1, obj2){
