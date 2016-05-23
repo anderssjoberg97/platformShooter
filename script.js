@@ -1,53 +1,20 @@
-var canvas, ctx, width=960, height=640;
-var player={
-        x:(width/2)-(24/2), 
-        y:height-200, 
-        width:24, 
-        height:24,
-        speed:5,
-        velX:0,
-        velY:0,
-        jumping:true,
-        grounded:false
-    };
-var weapons=[{name:"Pickadoll",reloadTime:0.2*60,reloading:0,projectileSpeed:8}];
-var enemy={
-    x:30,
-    y:150,
-    width:92,
-    height:24,
-    velX:0,
-    velY:0,
-    hp:100,
-    mode:0,
-    modeTimer:0,
-    modeVar:{
-        targetX:null,
-        targetY:null,
-        distance:null,
-        avgSpeed:3,
-        maxSpeed:8,
-        frame:0,
-        numFrames:null
-    }
+var canvas, ctx, width=480, height=640;
+var paddle={
+	x:(width/2)-32,
+	y:height-24,
+	width:64,
+	height:8
 };
-var keys=[], mouse={x:null,y:null,down:false};
-var friction=0.8, gravity=0.2;
-var playerBullets=[], boxes=[];
-var frameNum=0;
-
-boxes.push({
-    x: 0,
-    y: height-48,
-    width: 600,
-    height: 48
-});
-boxes.push({
-    x: 650,
-    y: height-100,
-    width: 200,
-    height: 48
-});
+var ball={
+	x:(width/2)-4,
+	y:paddle.y-10,
+	width:8,
+	speed:8,
+	speedIncrease:0.5,
+	angle:Math.PI+0.5+Math.random()*(Math.PI-1),
+}
+console.log(ball.angle);
+var score=0;
 
 
 window.onload = function(){init();};
@@ -81,193 +48,86 @@ function playerMovement(){
             player.velX--;
         }
     }
-    player.velX *= friction;
-    player.velY += gravity;
  
     
   
 }
-function shootingComponent(){
-    if(mouse.down && weapons[0].reloading>=weapons[0].reloadTime){
-        weapons[0].reloading=0;
-        var velX;
-        var velY;
-        if((player.x+(player.width/2))==mouse.x){
-            if(mouse.y<(player.y+(player.height/2))){
-                velY=-weapons[0].projectileSpeed;
-                velX=0;
-            }else{
-                velY=weapons[0].projectileSpeed;
-                velX=0;
-            }
-        }else{
-            var angle=Math.atan(Math.abs((player.y+(player.height/2))-mouse.y)/Math.abs((player.x+(player.width/2))-mouse.x));
-            if(mouse.y>(player.y+(player.height/2)))
-                velY=Math.sin(angle)*weapons[0].projectileSpeed;
-            else
-                velY=-Math.sin(angle)*weapons[0].projectileSpeed;
-            if(mouse.x>(player.x+(player.width/2)))
-                velX=Math.cos(angle)*weapons[0].projectileSpeed;
-            else
-                velX=-Math.cos(angle)*weapons[0].projectileSpeed;
-        }
-        playerBullets.push({
-            x:player.x+(player.width/2),
-            y:player.y+(player.height/2),
-            width:4,
-            height:4,
-            velX:velX,
-            velY:velY
-        });
-    }
-    weapons[0].reloading++; 
-}
-function enemyAi(){
-    //Mode 0 --> Fly to a random point in a smooth movement
-    if(enemy.mode==0){
-    	//Generate a new target position if none is set or if the target generated is to close to the enemys current position
-        while(enemy.modeVar.targetX==null || enemy.modeVar.targetY==null || (Math.sqrt((Math.pow((enemy.x+(enemy.width/2))-enemy.modeVar.targetX,2)+Math.pow((enemy.y+(enemy.height/2))-enemy.modeVar.targetY,2)))<100 && enemy.modeVar.frame==0)){
-            enemy.modeVar.targetX=(enemy.width/2)+Math.floor((Math.random()*(width-enemy.width)));
-            enemy.modeVar.targetY=enemy.height+Math.floor((Math.random()*(height/2)));
-            enemy.modeVar.numFrames=Math.floor(Math.sqrt((Math.pow((enemy.x+(enemy.width/2))-enemy.modeVar.targetX,2)+Math.pow((enemy.y+(enemy.height/2))-enemy.modeVar.targetY,2)))/enemy.modeVar.avgSpeed);
-            enemy.modeVar.frame=0;
-        }
-        var a=-((6*enemy.modeVar.numFrames*enemy.modeVar.avgSpeed)/Math.pow(enemy.modeVar.numFrames,3));
-        var b=-(enemy.modeVar.numFrames*a);
-        var vel=a*Math.pow(enemy.modeVar.frame,2)+b*enemy.modeVar.frame;
-        if(vel>=0 && enemy.modeVar.frame<=enemy.modeVar.numFrames){
-        	var velX, velY;
-        	var angle = Math.acos((enemy.modeVar.targetX-(enemy.x+(enemy.width/2)))/Math.sqrt((Math.pow((enemy.x+(enemy.width/2))-enemy.modeVar.targetX,2)+Math.pow((enemy.y+(enemy.height/2))-enemy.modeVar.targetY,2))));
-        	velX=Math.cos(angle)*vel;
-        	if((enemy.modeVar.targetY-(enemy.y+(enemy.height/2)))>=0){
-        		velY=Math.sin(angle)*vel;
-        	}else{
-        		velY=-Math.sin(angle)*vel;
-        	}
-        	enemy.x+=velX;
-        	enemy.y+=velY;
-        	enemy.modeVar.frame++;
-        }else{
-        	enemy.modeVar.targetX=null;
-        	enemy.modeVar.targetY=null;
-        	enemy.modeVar.numFrames=null;
-        	enemy.modeVar.frame=0;
-        }
+function ballMovement(){
 
-        
-        
-    }
-}
-function collisionCheck(obj1, obj2){
-    var vX = (obj1.x + (obj1.width / 2)) - (obj2.x + (obj2.width / 2)),
-        vY = (obj1.y + (obj1.height / 2)) - (obj2.y + (obj2.height / 2)),
-        hWidths = (obj1.width / 2) + (obj2.width / 2),
-        hHeights = (obj1.height / 2) + (obj2.height / 2),
-        colDir = null;
-    if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
-        var oX = hWidths - Math.abs(vX),
-            oY = hHeights - Math.abs(vY);
-        
-        if (oX >= oY) {
-            if (vY > 0) {
-                colDir = "t";
-                obj1.y += oY;
-            } else {
-                colDir = "b";
-                obj1.y -= oY;
-            }
-        } else {
-            if (vX > 0) {
-                colDir = "l";
-                obj1.x += oX;
-            } else {
-                colDir = "r";
-                obj1.x -= oX;
-            }
-        }
-    }
-    return colDir;
-}
-function bulletCollision(obj1, obj2){
-    var vX = (obj1.x + (obj1.width / 2)) - (obj2.x + (obj2.width / 2)),
-        vY = (obj1.y + (obj1.height / 2)) - (obj2.y + (obj2.height / 2)),
-        hWidths = (obj1.width / 2) + (obj2.width / 2),
-        hHeights = (obj1.height / 2) + (obj2.height / 2),
-        colDir = null;
-    if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
-        var oX = hWidths - Math.abs(vX),
-            oY = hHeights - Math.abs(vY);
-        
-        if (oX >= oY) {
-            if (vY > 0) {
-                colDir = "t";
-            } else {
-                colDir = "b";
-            }
-        } else {
-            if (vX > 0) {
-                colDir = "l";
+	//If collision with right side
+	if(ball.x+(ball.speed*Math.cos(ball.angle))+ball.width>=width){
+		var excess=width-(ball.x+(ball.speed*Math.cos(ball.angle))+ball.width+ball.width-width);
+		
+		ball.x=excess;
+		if(ball.speed*Math.sin(ball.angle)<0)
+			ball.angle=Math.PI+(2*Math.PI-ball.angle);
+		else
+			ball.angle=Math.PI*0.5+(Math.PI*0.5-ball.angle);
+		console.log("Ex: "+excess+" X: "+(excess+(ball.speed*Math.cos(ball.angle))));
+	}
+	//If collision with left side
+	else if(ball.x+(ball.speed*Math.cos(ball.angle))<=0){
+		
+		var excess=-ball.x-(ball.speed*Math.cos(ball.angle));
+		//var excess=-Math.floor(ball.x+(ball.speed*Math.cos(ball.angle)));
+		
+		ball.x=excess;
+		if(ball.speed*Math.sin(ball.angle)<0)
+			ball.angle=3*Math.PI-ball.angle;
+		else
+			ball.angle=Math.PI-ball.angle;
+		console.log("Ex: "+excess+" X: "+(excess+(ball.speed*Math.cos(ball.angle))));
+	}
+	//If no collision with left or right borders
+	else{
+		ball.x+=ball.speed*Math.cos(ball.angle);
+	}
 
-            } else {
-                colDir = "r";
-            }
-        }
-    }
-    return colDir;
+	//If collision with top border
+	if(ball.y+ball.speed*Math.sin(ball.angle)<=0){
+		var excess=-(ball.y+ball.speed*Math.sin(ball.angle));
+		ball.y=excess;
+		console.log(excess);
+		if(ball.speed*Math.cos(ball.angle)>0)
+			ball.angle=Math.PI*0.5-(ball.angle-3*Math.PI*0.5);
+		else
+			ball.angle=Math.PI*0.5+(3*Math.PI*0.5-ball.angle);
+	}
+	else if(ball.y+ball.speed*Math.sin(ball.angle)+ball.width>=paddle.y){
+		if(ball.x+ball.width>=paddle.x && ball.x<=paddle.x+paddle.width){
+			var excess=ball.y+ball.speed*Math.sin(ball.angle)+ball.width+ball.width-paddle.y;
+			ball.y=paddle.y-excess;
+			score++;
+			ball.speed+=ball.speedIncrease;
+			if(ball.speed*Math.cos(ball.angle)>0)
+				ball.angle=Math.PI*3*0.5+(Math.PI*0.5-ball.angle);
+			else
+				ball.angle=Math.PI*2-ball.angle;
+		}
+		else if(ball!=null){
+			alert("Fucking lost boys");
+			ball=null;
+		}
+	}
+	else{
+		ball.y+=ball.speed*Math.sin(ball.angle);
+	}
+	
 }
 function render() {
+	ballMovement();
     requestAnimFrame(render);
-    playerMovement();
-    shootingComponent();
-    enemyAi();
-    ctx.clearRect(0,0,width,height);
-    ctx.fillStyle="orange";
-    ctx.beginPath();
-    for(var i=0;i<playerBullets.length;i++){
-        if(playerBullets[i].x<0 || playerBullets[i].x>width || playerBullets[i].y<0 || playerBullets[i].y>height){
-            playerBullets.splice(i,1);
-        }else if(bulletCollision(playerBullets[i],enemy) && enemy.hp>0){
-            playerBullets.splice(i,1);
-            enemy.hp-=5;
-            console.log(enemy.hp);
-        }else{
-            ctx.rect(playerBullets[i].x, playerBullets[i].y, playerBullets[i].width, playerBullets[i].height);
-            playerBullets[i].x+=playerBullets[i].velX;
-            playerBullets[i].y+=playerBullets[i].velY;
-        }
-    }
-    ctx.fill();
-    ctx.fillStyle="black";
-    ctx.beginPath();
-    player.grounded=false;
-    for(var i=0;i<boxes.length;i++){
-        ctx.rect(boxes[i].x, boxes[i].y, boxes[i].width, boxes[i].height);
-        var dir = collisionCheck(player, boxes[i]);
-        if (dir === "l" || dir === "r") {
-            player.velX = 0;
-            player.jumping = false;
-        } else if (dir === "b") {
-            player.grounded = true;
-            player.jumping = false;
-        } else if (dir === "t") {
-            player.velY *= -1;
-        }
-        
-    }
-    if(player.grounded){
-         player.velY = 0;
-    }
-    player.x += player.velX;
-    player.y += player.velY;
+    ctx.fillStyle="#99ddff";
+    ctx.fillRect(0,0,width,height);
+
+    ctx.fillStyle="#fff"
+    ctx.font = "24px Arial";
+    ctx.alignText="right";
+    ctx.fillText(score, width-24, 28);
     
-    ctx.fill();
-    if(enemy.hp>0){
-        ctx.fillStyle="red";
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-    }
-    
-    ctx.fillStyle = "blue";
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+
+    ctx.fillRect(ball.x, ball.y, ball.width, ball.width);
 }
 
 function init(){
@@ -276,31 +136,12 @@ function init(){
     canvas.width=width;
     canvas.height=height;
 
-    document.body.addEventListener("keydown", function(e) {
-    keys[e.keyCode] = true;
-    });
-    document.body.addEventListener("keyup", function(e) {
-        keys[e.keyCode] = false;
-    });
-    canvas.onmousedown=function(e){
-        var e = e || window.event;
-        if ('object' === typeof e && e.button==0){
-            mouse.x=e.clientX-canvas.getBoundingClientRect().left;
-            mouse.y=e.clientY-canvas.getBoundingClientRect().top;
-            mouse.down=true;
-        }
-    };
-    canvas.onmouseup=function(e){
-        var e = e || window.event;
-        if ('object' === typeof e && e.button==0){
-            mouse.down=false;
-        }
-    };
+
+
     canvas.onmousemove=function(e){
         var e = e || window.event;
         if ('object' === typeof e && e.button==0){
-            mouse.x=e.clientX-canvas.getBoundingClientRect().left;
-            mouse.y=e.clientY-canvas.getBoundingClientRect().top;
+            paddle.x=e.clientX-canvas.getBoundingClientRect().left-paddle.width/2;
         }
     };
     
