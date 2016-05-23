@@ -13,11 +13,12 @@ var ball={
 	speedIncrease:0.5,
 	angle:Math.PI+0.5+Math.random()*(Math.PI-1),
 }
-console.log(ball.angle);
 var score=0;
 
 
 window.onload = function(){init();};
+
+
 window.requestAnimFrame = (function(){
     return  window.requestAnimationFrame       || 
         window.webkitRequestAnimationFrame || 
@@ -29,29 +30,6 @@ window.requestAnimFrame = (function(){
         };
 })();
 
-
-function playerMovement(){
-    if (keys[38] || keys[32] || keys[87]) {
-        if(!player.jumping && player.grounded){
-            player.jumping = true;
-            player.grounded=false;
-            player.velY = -player.speed*1;
-        }
-    }
-    if (keys[39] || keys[68]) {
-        if (player.velX < player.speed) {             
-            player.velX++;         
-        }     
-    }     
-    if (keys[37] || keys[65]) {               
-        if (player.velX > -player.speed) {
-            player.velX--;
-        }
-    }
- 
-    
-  
-}
 function ballMovement(){
 
 	//If collision with right side
@@ -76,7 +54,6 @@ function ballMovement(){
 			ball.angle=3*Math.PI-ball.angle;
 		else
 			ball.angle=Math.PI-ball.angle;
-		console.log("Ex: "+excess+" X: "+(excess+(ball.speed*Math.cos(ball.angle))));
 	}
 	//If no collision with left or right borders
 	else{
@@ -87,7 +64,6 @@ function ballMovement(){
 	if(ball.y+ball.speed*Math.sin(ball.angle)<=0){
 		var excess=-(ball.y+ball.speed*Math.sin(ball.angle));
 		ball.y=excess;
-		console.log(excess);
 		if(ball.speed*Math.cos(ball.angle)>0)
 			ball.angle=Math.PI*0.5-(ball.angle-3*Math.PI*0.5);
 		else
@@ -117,14 +93,14 @@ function ballMovement(){
 function render() {
 	ballMovement();
     requestAnimFrame(render);
+
     ctx.fillStyle="#99ddff";
     ctx.fillRect(0,0,width,height);
 
-    ctx.fillStyle="#fff"
+    ctx.fillStyle="#fff";
     ctx.font = "24px Arial";
-    ctx.alignText="right";
-    ctx.fillText(score, width-24, 28);
-    
+    ctx.fillText(score, width-48, 28);
+
     ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
 
     ctx.fillRect(ball.x, ball.y, ball.width, ball.width);
@@ -137,10 +113,9 @@ function init(){
     canvas.height=height;
 
 
-
     canvas.onmousemove=function(e){
         var e = e || window.event;
-        if ('object' === typeof e && e.button==0){
+        if ('object' === typeof e){
             paddle.x=e.clientX-canvas.getBoundingClientRect().left-paddle.width/2;
         }
     };
